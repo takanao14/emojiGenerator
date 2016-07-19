@@ -12,72 +12,102 @@ class String2emoji(object):
     def getFont(self,size):
         return ImageFont.truetype(self.fontName, size, encoding='utf-8')
 
-    def cutEffectiveRange(self,text,wMax,hMax):
-        for i in range(8,hMax*2):
+    def cutEffectiveRange(self, text, width, height):
+        pt = height * 2
+        for i in range(8, height*2):
             font = self.getFont(i)
             w, h = font.getsize(text)
-            x0 = self.stringOverBorderX(text,font)
-            y0 = self.stringOverBorderY(text,font)
-            x1 = self.stringUnderBorderX(text,font,x0)
-            y1 = self.stringUnderBorderY(text,font,y0)
-            if (x1 >= wMax-1) or (y1 >= hMax-1) :
-                return (i,x0,y0,x1,y1);
-    def stringOverBorderX(self,text,font):
-        for x in range(0,-128,-1):
-            img = Image.new("RGBA",(128,128),self.backColor)
-            draw = ImageDraw.Draw(img)
-            draw.text((x,0), text.decode('mbcs'), fill=(0,0,0), font=font)
-            limitFlag = 0
-            for i in range(0,128):
-                color = img.getpixel((0,i))
+            if ((w > width) or (h > height)):
+                x0, y0, x1, y1 = self.getStringRect(text, font, w, h)
+                if (((x1-x0) > width) or ((y1-y0) > height)):
+                    print("over")
+                    pt = i - 1
+                    break;
+        font = self.getFont(pt)
+        w, h = font.getsize(text)
+        x0, y0, x1, y1 = self.getStringRect(text, font, w, h)
+        print("%d,%d,%d,%d" % (x0, y0, x1, y1))
+        return(pt, x0, y0, x1, y1)
+
+    def getTopLeftY(self, img):
+        w = img.width
+        h = img.height
+        for cy in range(0, h):
+            for cx in range(0, w):
+                color = img.getpixel((cx, cy))
                 if color != self.backColor:
-                    limitFlag = 1;
-            if limitFlag > 0:
-                return x
-    def stringOverBorderY(self,text,font):
-        for y in range(0,-128,-1):
-            img = Image.new("RGBA",(128,128),self.backColor)
-            draw = ImageDraw.Draw(img)
-            draw.text((0,y), text.decode('mbcs'), fill=(0,0,0), font=font)
-            limitFlag = 0
-            for i in range(0,128):
-                color = img.getpixel((i,0))
+                    return cy
+        return -1
+
+    def getTopLeftX(self, img):
+        w = img.width
+        h = img.height
+        for cx in range(0, w):
+            for cy in range(0, h):
+                color = img.getpixel((cx, cy))
                 if color != self.backColor:
-                    limitFlag = 1;
-            if limitFlag > 0:
-                return y
-    def stringUnderBorderX(self,text,font,x0):
-        img = Image.new("RGBA",(256,128),self.backColor)
+                    return cx
+        return -1
+
+    def getBottomRightY(self, img):
+        w = img.width
+        h = img.height
+        for cy in range(h-1, -1, -1):
+            for cx in range(0, w):
+                color = img.getpixel((cx, cy))
+                if color != self.backColor:
+                    return cy
+        return -1
+
+    def getBottomRightX(self, img):
+        w = img.width
+        h = img.height
+        for cx in range(w-1, -1, -1):
+            for cy in range(0, h):
+                color = img.getpixel((cx, cy))
+                if color != self.backColor:
+                    return cx
+        return -1
+
+
+    def getStringRect(self, text, font, w, h):
+        img = Image.new("RGBA", (w, h), self.backColor)
         draw = ImageDraw.Draw(img)
-        draw.text((x0,0), text.decode('mbcs'), fill=(0,0,0), font=font)
-        for cx in range(255,0,-1):
-            for cy in range(0,128):
-                color = img.getpixel((cx,cy))
-                if color != self.backColor:
-                    return cx;
-    def stringUnderBorderY(self,text,font,y0):
-        img = Image.new("RGBA",(128,128),self.backColor)
-        draw = ImageDraw.Draw(img)
-        draw.text((0,y0), text.decode('mbcs'), fill=(0,0,0), font=font)
-        for cy in range(127,0,-1):
-            for cx in range(0,128):
-                color = img.getpixel((cx,cy))
-                if color != self.backColor:
-                    return cy;
+        draw.text((0,0), text, fill=(0,0,0), font=font)
+        x0 = self.getTopLeftX(img)
+        y0 = self.getTopLeftY(img)
+        x1 = self.getBottomRightX(img)
+        y1 = self.getBottomRightY(img)
+        return (x0, y0, x1, y1)
+
+
+
+
 
     def getEmoji(self):
-        img = Image.new("RGBA",self.imageSize,self.backColor)
+        img = Image.new("RGBA", self.imageSize, self.backColor)
         draw = ImageDraw.Draw(img)
+        #draw.rectangle([(0, 0), (128, 128)], outline=(255,0,0))
+
         l = len(self.textList)
-        if l == 1:
-            (size,x0,y0,x1,y1) = self.cutEffectiveRange(self.textList[0],128,128)
-            font = self.getFont(size)
-            draw.text((x0,y0+abs(128-y1)/2), self.textList[0].decode('mbcs'), fill=(0,0,0), font=font)
-            return img
+        width = 128
+        height = int(128 / l)
 
         for i in range(0,l):
-            (size,x0,y0,x1,y1) = self.cutEffectiveRange(self.textList[0],128,128/l)
-            font = self.getFont(size)
+            print("loop=%d" % i)
 
-            draw.text((x0+(abs(128-x1)/2),y0+(128/l*i)), self.textList[i].decode('mbcs'), fill=(0,0,0), font=font)
+            (size, x0, y0, x1, y1) = self.cutEffectiveRange(self.textList[i], width, height)
+            print("size=%d, %d, %d, %d, %d" % (size, x0, y0, x1, y1))
+            font = self.getFont(size)
+            w = x1 - x0
+            h = y1 - y0
+
+            ox = int((width - w)/2)
+            oy = int((height - h)/2) + (height * i)
+            x = ox - x0
+            y = oy - y0
+
+            #draw.rectangle([(ox, oy), (ox+w, oy+h)], outline=(0,0,255))
+            draw.text((x, y), self.textList[i], fill=(0, 0, 0), font=font)
+
         return img
