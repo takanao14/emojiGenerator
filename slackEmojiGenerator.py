@@ -16,7 +16,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('messages', type=str, nargs='+', help='emoji message')
-    parser.add_argument('-f', '--font', type=str, nargs='?', help='set font (default=meiryob.ttc)')
+    parser.add_argument('-f', '--font', type=str, nargs='?', help='set font (default=NotoSanssJP-Bold.otf)')
     parser.add_argument('-o', '--out', type=str, nargs='?', help='output image file (default=test.png)')
     parser.add_argument('-c', '--color', type=convColor, nargs='?', help='draw color #RRGGBB (default=#000000)')
     parser.set_defaults(font='NotoSansJP-Bold.otf', out='test.png', color='000000')
