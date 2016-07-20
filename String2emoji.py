@@ -3,9 +3,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 class String2emoji(object):
     """docstring for String2emoji"""
-    def __init__(self, argText,argFontName):
+    def __init__(self, argText, argColor, argFontName):
         self.textList = argText
         self.fontName = argFontName
+        self.color = argColor
         self.backColor = (255,255,255,0)
         self.imageSize = (128,128)
 
@@ -14,20 +15,20 @@ class String2emoji(object):
 
     def cutEffectiveRange(self, text, width, height):
         pt = height * 2
-        for i in range(8, height*2):
+        for i in range(8, pt):
             font = self.getFont(i)
-            w, h = font.getsize(text)
-            if ((w > width) or (h > height)):
-                x0, y0, x1, y1 = self.getStringRect(text, font, w, h)
-                if (((x1-x0) > width) or ((y1-y0) > height)):
+            fw, fh = font.getsize(text)
+            if ((fw > width) or (fh > height)):
+                ox, oy, w, h = self.getStringRect(text, font, fw, fh)
+                if ((w > width) or (h > height)):
                     print("over")
                     pt = i - 1
                     break;
         font = self.getFont(pt)
-        w, h = font.getsize(text)
-        x0, y0, x1, y1 = self.getStringRect(text, font, w, h)
-        print("%d,%d,%d,%d" % (x0, y0, x1, y1))
-        return(pt, x0, y0, x1, y1)
+        fw, fh = font.getsize(text)
+        ox, oy, w, h = self.getStringRect(text, font, fw, fh)
+        print("ox=%d,oy=%d,w=%d,h=%d" % (ox, oy, w, h))
+        return(pt, ox, oy, w, h)
 
     def getTopLeftY(self, img):
         w = img.width
@@ -70,18 +71,15 @@ class String2emoji(object):
         return -1
 
 
-    def getStringRect(self, text, font, w, h):
-        img = Image.new("RGBA", (w, h), self.backColor)
+    def getStringRect(self, text, font, fw, fh):
+        img = Image.new("RGBA", (fw, fh), self.backColor)
         draw = ImageDraw.Draw(img)
         draw.text((0,0), text, fill=(0,0,0), font=font)
         x0 = self.getTopLeftX(img)
         y0 = self.getTopLeftY(img)
         x1 = self.getBottomRightX(img)
         y1 = self.getBottomRightY(img)
-        return (x0, y0, x1, y1)
-
-
-
+        return (x0, y0, x1 - x0, y1 - y0)
 
 
     def getEmoji(self):
@@ -89,25 +87,39 @@ class String2emoji(object):
         draw = ImageDraw.Draw(img)
         #draw.rectangle([(0, 0), (128, 128)], outline=(255,0,0))
 
+        textlen = []
+        l = len(self.textList)
+        for i in range(0, l):
+            textlen.append(len(self.textList[i]))
+        print(textlen)
+
+        if (min(textlen) == max(textlen)):
+            sameMode = True
+        else:
+            sameMode = False
+
         l = len(self.textList)
         width = 128
         height = int(128 / l)
 
-        for i in range(0,l):
-            print("loop=%d" % i)
+        sizelist = []
+        for i in range(0, l):
+            (size, ox, oy, w, h) = self.cutEffectiveRange(self.textList[i], width, height)
+            sizelist.append(size)
+        if sameMode:
+            size = min(sizelist)
+            for i in range(0, l):
+                sizelist[i] = size
 
-            (size, x0, y0, x1, y1) = self.cutEffectiveRange(self.textList[i], width, height)
-            print("size=%d, %d, %d, %d, %d" % (size, x0, y0, x1, y1))
-            font = self.getFont(size)
-            w = x1 - x0
-            h = y1 - y0
-
-            ox = int((width - w)/2)
-            oy = int((height - h)/2) + (height * i)
-            x = ox - x0
-            y = oy - y0
-
-            #draw.rectangle([(ox, oy), (ox+w, oy+h)], outline=(0,0,255))
-            draw.text((x, y), self.textList[i], fill=(0, 0, 0), font=font)
+        for i in range(0, l):
+            text = self.textList[i]
+            font = self.getFont(sizelist[i])
+            fw, fh = font.getsize(text)
+            (ox, oy, w, h) = self.getStringRect(text, font, fw, fh)
+            x = int((width - w)/2)
+            y = int((height - h)/2) + (height * i)
+            #draw.rectangle([(x, y), (x+w, y+h)], outline=(0,0,255))
+            draw.text((x - ox, y - oy), text, fill=self.color, font=font)
 
         return img
+
