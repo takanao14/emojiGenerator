@@ -1,9 +1,8 @@
 # emojiGenerator
 slackのemojiを自動生成する
 
-jiuyaさんのemojiGeneratorをpython3で動かしてみたりしたもの
-https://github.com/jiuya/emojiGenerator.git
-
+emojiGeneratorをpython3で動かしてみたりしたもの
+オリジナルは https://github.com/jiuya/emojiGenerator.git
 
 ## 実行環境
 - python 3.5.1
